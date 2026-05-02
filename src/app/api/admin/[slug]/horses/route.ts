@@ -1,3 +1,4 @@
+import { requireRaceOfficeSession } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -5,6 +6,8 @@ type Ctx = { params: Promise<{ slug: string }> };
 
 export async function POST(req: NextRequest, ctx: Ctx) {
   const { slug } = await ctx.params;
+  const denied = requireRaceOfficeSession(req, slug);
+  if (denied) return denied;
   const supabase = createServiceClient();
   const { data: game } = await supabase
     .from("games")
@@ -46,6 +49,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
 export async function DELETE(req: NextRequest, ctx: Ctx) {
   const { slug } = await ctx.params;
+  const denied = requireRaceOfficeSession(req, slug);
+  if (denied) return denied;
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
   const supabase = createServiceClient();

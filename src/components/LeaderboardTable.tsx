@@ -1,5 +1,6 @@
 "use client";
 
+import { HorseNumberCloth } from "@/components/HorseNumberCloth";
 import type { LeaderboardRow } from "@/lib/leaderboardRows";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -32,31 +33,6 @@ function RankBadge({ index, settled }: { index: number; settled: boolean }) {
   return (
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--foreground)]/8 font-mono text-sm font-semibold text-[var(--derby-muted)] tabular-nums">
       {index + 1}
-    </span>
-  );
-}
-
-/** Post position shown like a saddle cloth / program number. */
-function HorseNumberCloth({
-  n,
-  emphasis,
-  className = "",
-}: {
-  n: number;
-  emphasis: "gold" | "muted";
-  className?: string;
-}) {
-  const isGold = emphasis === "gold";
-  return (
-    <span
-      className={`flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border-2 px-1.5 font-mono text-base font-bold tabular-nums leading-none sm:min-h-10 sm:min-w-10 sm:text-lg ${className} ${
-        isGold
-          ? "border-[var(--derby-gold)] bg-[var(--derby-gold)]/15 text-[var(--derby-gold)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
-          : "border-[var(--foreground)]/25 bg-[var(--foreground)]/8 text-[var(--foreground)]"
-      }`}
-      aria-label={`Horse number ${n}`}
-    >
-      {n}
     </span>
   );
 }

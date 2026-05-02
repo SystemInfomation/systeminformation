@@ -1,11 +1,14 @@
+import { requireRaceOfficeSession } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
 /** Reset all bets and balances; clear results. Game back to open. */
-export async function POST(_req: Request, ctx: Ctx) {
+export async function POST(req: NextRequest, ctx: Ctx) {
   const { slug } = await ctx.params;
+  const denied = requireRaceOfficeSession(req, slug);
+  if (denied) return denied;
   const supabase = createServiceClient();
   const { data: game, error: gErr } = await supabase
     .from("games")

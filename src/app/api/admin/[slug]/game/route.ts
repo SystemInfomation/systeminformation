@@ -1,3 +1,4 @@
+import { requireRaceOfficeSession } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -6,6 +7,8 @@ type Ctx = { params: Promise<{ slug: string }> };
 /** PATCH game settings (multipliers, race time, ai_summary, etc.) */
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   const { slug } = await ctx.params;
+  const denied = requireRaceOfficeSession(req, slug);
+  if (denied) return denied;
   const body = await req.json();
   const supabase = createServiceClient();
   const patch: Record<string, unknown> = {};

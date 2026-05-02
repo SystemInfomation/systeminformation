@@ -150,7 +150,7 @@ export function Top3PickForm({
               <option value="">Choose a horse…</option>
               {active.map((h) => (
                 <option key={h.id} value={h.id}>
-                  #{h.post_position} {h.name}
+                  No. {h.post_position} — {h.name}
                 </option>
               ))}
             </select>
