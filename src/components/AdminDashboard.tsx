@@ -5,7 +5,6 @@ import { Reorder } from "framer-motion";
 import { useMemo, useState } from "react";
 
 export function AdminDashboard({ slug, initialGame, initialHorses }: { slug: string; initialGame: Game; initialHorses: Horse[] }) {
-  const [game, setGame] = useState(initialGame);
   const [horses, setHorses] = useState(initialHorses);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -14,34 +13,6 @@ export function AdminDashboard({ slug, initialGame, initialHorses }: { slug: str
   );
 
   const horseById = useMemo(() => new Map(horses.map((h) => [h.id, h])), [horses]);
-
-  async function lock(locked: boolean) {
-    setMsg(null);
-    const r = await fetch(`/api/admin/${slug}/lock`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ locked }),
-    });
-    const j = await r.json();
-    if (!r.ok) {
-      setMsg(j.error ?? "Lock failed");
-      return;
-    }
-    setGame(j as Game);
-  }
-
-  async function resetGame() {
-    if (!confirm("Reset ALL bets and balances for this game?")) return;
-    setMsg(null);
-    const r = await fetch(`/api/admin/${slug}/reset`, { method: "POST" });
-    const j = await r.json();
-    if (!r.ok) {
-      setMsg(j.error ?? "Reset failed");
-      return;
-    }
-    setMsg("Reset complete. Reloading.");
-    window.location.reload();
-  }
 
   async function settle() {
     setMsg(null);
@@ -97,33 +68,8 @@ export function AdminDashboard({ slug, initialGame, initialHorses }: { slug: str
 
   return (
     <div className="space-y-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-serif text-3xl font-bold text-[var(--foreground)]">Race office — {slug}</h1>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => void lock(true)}
-            className="rounded-xl border border-white/15 px-3 py-2 text-sm text-[var(--foreground)]"
-          >
-            Lock betting
-          </button>
-          <button
-            type="button"
-            onClick={() => void lock(false)}
-            className="rounded-xl border border-white/15 px-3 py-2 text-sm text-[var(--foreground)]"
-          >
-            Unlock
-          </button>
-          <button
-            type="button"
-            onClick={() => void resetGame()}
-            className="rounded-xl border border-rose-500/40 px-3 py-2 text-sm text-rose-300"
-          >
-            Reset game
-          </button>
-        </div>
-      </div>
-      <p className="text-sm text-[var(--derby-muted)]">Status: {game.status}</p>
+      <h1 className="font-serif text-3xl font-bold text-[var(--foreground)]">Race office — {slug}</h1>
+      <p className="text-sm text-[var(--derby-muted)]">Status: {initialGame.status}</p>
       {msg && <p className="text-sm text-[var(--derby-gold)]">{msg}</p>}
 
       <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
