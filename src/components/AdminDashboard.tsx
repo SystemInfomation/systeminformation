@@ -1,6 +1,7 @@
 "use client";
 
 import type { Game, Horse } from "@/lib/database.types";
+import { Reorder } from "framer-motion";
 import { useMemo, useState } from "react";
 
 export function AdminDashboard({ slug, initialGame, initialHorses }: { slug: string; initialGame: Game; initialHorses: Horse[] }) {
@@ -94,18 +95,6 @@ export function AdminDashboard({ slug, initialGame, initialHorses }: { slug: str
     });
   }
 
-  function moveHorse(id: string, dir: -1 | 1) {
-    setFinishOrder((order) => {
-      const i = order.indexOf(id);
-      if (i < 0) return order;
-      const j = i + dir;
-      if (j < 0 || j >= order.length) return order;
-      const n = [...order];
-      [n[i], n[j]] = [n[j], n[i]];
-      return n;
-    });
-  }
-
   return (
     <div className="space-y-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -138,32 +127,49 @@ export function AdminDashboard({ slug, initialGame, initialHorses }: { slug: str
       {msg && <p className="text-sm text-[var(--derby-gold)]">{msg}</p>}
 
       <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
-        <h2 className="font-serif text-xl text-[var(--foreground)]">Finish order (drag via arrows)</h2>
-        <p className="text-xs text-[var(--derby-muted)]">Top of list = win. Used for exacta/trifecta + place/show.</p>
-        <ol className="mt-4 space-y-2">
+        <h2 className="font-serif text-xl text-[var(--foreground)]">Finish order</h2>
+        <p className="text-xs text-[var(--derby-muted)]">
+          Drag rows to reorder. Top = win. Used for exacta/trifecta + place/show.
+        </p>
+        <Reorder.Group
+          axis="y"
+          values={finishOrder}
+          onReorder={setFinishOrder}
+          className="mt-4 flex list-none flex-col gap-2 p-0"
+          as="ol"
+        >
           {finishOrder.map((id, idx) => {
             const h = horseById.get(id);
             if (!h) return null;
             return (
-              <li
+              <Reorder.Item
                 key={id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-black/10 px-3 py-2 text-sm text-[var(--foreground)]"
+                value={id}
+                as="li"
+                className="relative flex cursor-grab touch-none items-center gap-3 rounded-2xl border border-white/10 bg-black/10 px-3 py-3 text-sm text-[var(--foreground)] shadow-sm active:cursor-grabbing"
+                style={{ touchAction: "none" }}
               >
-                <span>
-                  {idx + 1}. {h.name} (#{h.post_position})
+                <span className="shrink-0 text-[var(--derby-muted)]" title="Drag to reorder">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <circle cx="9" cy="6" r="1.75" />
+                    <circle cx="15" cy="6" r="1.75" />
+                    <circle cx="9" cy="12" r="1.75" />
+                    <circle cx="15" cy="12" r="1.75" />
+                    <circle cx="9" cy="18" r="1.75" />
+                    <circle cx="15" cy="18" r="1.75" />
+                  </svg>
                 </span>
-                <span className="flex gap-1">
-                  <button type="button" className="rounded border border-white/15 px-2" onClick={() => moveHorse(id, -1)}>
-                    ↑
-                  </button>
-                  <button type="button" className="rounded border border-white/15 px-2" onClick={() => moveHorse(id, 1)}>
-                    ↓
-                  </button>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--foreground)]/10 font-mono text-xs font-semibold tabular-nums text-[var(--derby-muted)]">
+                  {idx + 1}
                 </span>
-              </li>
+                <span className="min-w-0 flex-1 font-medium">
+                  {h.name}{" "}
+                  <span className="font-normal text-[var(--derby-muted)]">(#{h.post_position})</span>
+                </span>
+              </Reorder.Item>
             );
           })}
-        </ol>
+        </Reorder.Group>
         <button
           type="button"
           onClick={() => void settle()}
