@@ -36,7 +36,42 @@ function RankBadge({ index, settled }: { index: number; settled: boolean }) {
   );
 }
 
-function PickLane({ place, label, name }: { place: 1 | 2 | 3; label: string; name: string }) {
+/** Post position shown like a saddle cloth / program number. */
+function HorseNumberCloth({
+  n,
+  emphasis,
+  className = "",
+}: {
+  n: number;
+  emphasis: "gold" | "muted";
+  className?: string;
+}) {
+  const isGold = emphasis === "gold";
+  return (
+    <span
+      className={`flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border-2 px-1.5 font-mono text-base font-bold tabular-nums leading-none sm:min-h-10 sm:min-w-10 sm:text-lg ${className} ${
+        isGold
+          ? "border-[var(--derby-gold)] bg-[var(--derby-gold)]/15 text-[var(--derby-gold)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+          : "border-[var(--foreground)]/25 bg-[var(--foreground)]/8 text-[var(--foreground)]"
+      }`}
+      aria-label={`Horse number ${n}`}
+    >
+      {n}
+    </span>
+  );
+}
+
+function PickLane({
+  place,
+  label,
+  name,
+  post,
+}: {
+  place: 1 | 2 | 3;
+  label: string;
+  name: string;
+  post: number | null;
+}) {
   const ring =
     place === 1
       ? "border-[var(--derby-gold)]/35 bg-[var(--derby-gold)]/12"
@@ -45,19 +80,41 @@ function PickLane({ place, label, name }: { place: 1 | 2 | 3; label: string; nam
         : "border-[var(--foreground)]/12 bg-[var(--foreground)]/4";
 
   return (
-    <div className={`flex min-w-0 items-center gap-2.5 rounded-2xl border px-3 py-2.5 sm:px-3.5 sm:py-3 ${ring}`}>
-      <span
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-          place === 1
-            ? "bg-[var(--derby-gold)] text-[var(--derby-forest)]"
-            : "bg-[var(--foreground)]/12 text-[var(--foreground)]"
-        }`}
-      >
-        {place}
-      </span>
+    <div className={`flex min-w-0 items-center gap-2.5 rounded-2xl border px-3 py-2.5 sm:gap-3 sm:px-3.5 sm:py-3 ${ring}`}>
+      {post != null ? (
+        <HorseNumberCloth n={post} emphasis={place === 1 ? "gold" : "muted"} />
+      ) : (
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+            place === 1
+              ? "bg-[var(--derby-gold)] text-[var(--derby-forest)]"
+              : "bg-[var(--foreground)]/12 text-[var(--foreground)]"
+          }`}
+          aria-hidden
+        >
+          {place}
+        </span>
+      )}
       <div className="min-w-0 flex-1">
         <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-[var(--derby-muted)]">{label}</p>
         <p className="truncate text-sm font-medium leading-snug text-[var(--foreground)] sm:text-base">{name}</p>
+      </div>
+    </div>
+  );
+}
+
+function HorseCell({ post, name }: { post: number | null; name: string }) {
+  return (
+    <div className="flex max-w-[200px] min-w-0 items-center gap-2.5">
+      {post != null ? (
+        <HorseNumberCloth n={post} emphasis="gold" className="sm:min-h-11 sm:min-w-11" />
+      ) : (
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-[var(--foreground)]/20 text-xs text-[var(--derby-muted)]">
+          —
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <span className="block truncate text-[var(--foreground)]/90">{name}</span>
       </div>
     </div>
   );
@@ -126,9 +183,9 @@ export function LeaderboardTable({
             <tr>
               <th className="px-4 py-3.5 font-semibold">#</th>
               <th className="px-4 py-3.5 font-semibold">Player</th>
-              <th className="px-4 py-3.5 font-semibold">1st</th>
-              <th className="px-4 py-3.5 font-semibold">2nd</th>
-              <th className="px-4 py-3.5 font-semibold">3rd</th>
+              <th className="px-4 py-3.5 font-semibold">1st · #</th>
+              <th className="px-4 py-3.5 font-semibold">2nd · #</th>
+              <th className="px-4 py-3.5 font-semibold">3rd · #</th>
               {liveSettled && <th className="px-4 py-3.5 font-semibold">Match</th>}
             </tr>
           </thead>
@@ -151,9 +208,15 @@ export function LeaderboardTable({
                     <span className="font-medium">{r.name}</span>
                   </div>
                 </td>
-                <td className="max-w-[140px] truncate px-4 py-3.5 align-middle text-[var(--foreground)]/90">{r.h1}</td>
-                <td className="max-w-[140px] truncate px-4 py-3.5 align-middle text-[var(--foreground)]/90">{r.h2}</td>
-                <td className="max-w-[140px] truncate px-4 py-3.5 align-middle text-[var(--foreground)]/90">{r.h3}</td>
+                <td className="px-4 py-3.5 align-middle">
+                  <HorseCell post={r.post1} name={r.h1} />
+                </td>
+                <td className="px-4 py-3.5 align-middle">
+                  <HorseCell post={r.post2} name={r.h2} />
+                </td>
+                <td className="px-4 py-3.5 align-middle">
+                  <HorseCell post={r.post3} name={r.h3} />
+                </td>
                 {liveSettled && (
                   <td className="px-4 py-3.5 align-middle">
                     <div className="flex flex-col gap-1.5">
@@ -212,9 +275,9 @@ export function LeaderboardTable({
                   )}
                 </div>
                 <div className="mt-4 space-y-2">
-                  <PickLane place={1} label="1st pick" name={r.h1} />
-                  <PickLane place={2} label="2nd pick" name={r.h2} />
-                  <PickLane place={3} label="3rd pick" name={r.h3} />
+                  <PickLane place={1} label="1st pick" name={r.h1} post={r.post1} />
+                  <PickLane place={2} label="2nd pick" name={r.h2} post={r.post2} />
+                  <PickLane place={3} label="3rd pick" name={r.h3} post={r.post3} />
                 </div>
               </div>
             </div>

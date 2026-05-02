@@ -6,6 +6,10 @@ export type LeaderboardRow = {
   id: string;
   name: string;
   emoji: string;
+  /** Horse post positions (starting gate / program number). */
+  post1: number | null;
+  post2: number | null;
+  post3: number | null;
   h1: string;
   h2: string;
   h3: string;
@@ -31,13 +35,19 @@ export async function buildLeaderboardRows(
   const rows = ((picks ?? []) as Top3Pick[]).map((tp) => {
     const p = profileByUser.get(tp.user_id);
     const score = settled ? top3ExactScore(tp.pick_first, tp.pick_second, tp.pick_third, positions) : null;
+    const horse1 = horseMap.get(tp.pick_first);
+    const horse2 = horseMap.get(tp.pick_second);
+    const horse3 = horseMap.get(tp.pick_third);
     return {
       id: tp.id,
       name: p?.display_name ?? "Player",
       emoji: p?.avatar_emoji ?? "🐎",
-      h1: horseMap.get(tp.pick_first)?.name ?? "—",
-      h2: horseMap.get(tp.pick_second)?.name ?? "—",
-      h3: horseMap.get(tp.pick_third)?.name ?? "—",
+      post1: horse1?.post_position ?? null,
+      post2: horse2?.post_position ?? null,
+      post3: horse3?.post_position ?? null,
+      h1: horse1?.name ?? "—",
+      h2: horse2?.name ?? "—",
+      h3: horse3?.name ?? "—",
       score,
     };
   });
