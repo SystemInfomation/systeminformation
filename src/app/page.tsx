@@ -82,15 +82,34 @@ export default async function HomePage() {
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-white/5 p-6 dark:bg-black/20">
-        <h2 className="font-serif text-xl text-[var(--foreground)]">Fun facts (optional)</h2>
+        <h2 className="font-serif text-xl text-[var(--foreground)]">Race office picks</h2>
+        <p className="mt-1 text-xs text-[var(--derby-muted)]">
+          From odds and optional model % on each horse. Refresh in Race office → &quot;Refresh AI&quot;.
+        </p>
         <ul className="mt-4 space-y-2 text-sm text-[var(--foreground)]">
           <li>
-            <span className="text-[var(--derby-gold)]">Buzz pick:</span> {String(ai.topWinner ?? "—")}
+            <span className="text-[var(--derby-gold)]">Top pick:</span> {String(ai.topWinner ?? "—")}
           </li>
           <li>
-            <span className="text-[var(--derby-gold)]">Long shot:</span> {String(ai.sleeper ?? "—")}
+            <span className="text-[var(--derby-gold)]">Sleeper:</span> {String(ai.sleeper ?? "—")}
+          </li>
+          <li>
+            <span className="text-[var(--derby-gold)]">Dark horse:</span> {String(ai.darkHorse ?? "—")}
+          </li>
+          <li>
+            <span className="text-[var(--derby-gold)]">Overrated chalk:</span> {String(ai.overrated ?? "—")}
           </li>
         </ul>
+        {(ai.note != null || ai.rationale != null) && (
+          <p className="mt-4 text-xs leading-relaxed text-[var(--derby-muted)]">
+            {String(ai.note ?? ai.rationale ?? "")}
+          </p>
+        )}
+        {ai.updatedAt != null && (
+          <p className="mt-2 text-xs text-[var(--derby-muted)]">
+            Updated {new Date(String(ai.updatedAt)).toLocaleString()}
+          </p>
+        )}
       </section>
     </div>
   );

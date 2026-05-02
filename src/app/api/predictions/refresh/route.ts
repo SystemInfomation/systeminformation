@@ -1,8 +1,10 @@
+import { computeAiPicksFromHorses } from "@/lib/aiPicksFromHorses";
+import type { Horse } from "@/lib/database.types";
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Best-effort public fetch (no API keys). Updates games.ai_summary.
+ * Updates games.ai_summary from real horse rows + Louisville weather (no racing API keys).
  * No authentication — for local / trusted family use only.
  */
 export async function POST(req: NextRequest) {
@@ -27,24 +29,35 @@ export async function POST(req: NextRequest) {
     /* ignore */
   }
 
-  const summary = {
-    topWinner: "Commandment",
-    sleeper: "Albus",
-    overrated: "Chief Wallabee",
-    darkHorse: "Danon Bourbon",
-    weather,
-    note:
-      "Heuristic placeholders when live pages block bots. Edit in Race office or DB.",
-    updatedAt: new Date().toISOString(),
-  };
-
   try {
     const supabase = createServiceClient();
-    const { error } = await supabase
-      .from("games")
-      .update({ ai_summary: summary })
-      .eq("slug", slug);
-    if (error) throw error;
+    const { data: game, error: gameErr } = await supabase.from("games").select("id").eq("slug", slug).maybeSingle();
+    if (gameErr || !game) {
+      return NextResponse.json({ error: gameErr?.message ?? "game not found" }, { status: 404 });
+    }
+    const { data: horseRows, error: horseErr } = await supabase
+      .from("horses")
+      .select("*")
+      .eq("game_id", game.id)
+      .order("post_position", { ascending: true });
+    if (horseErr) throw horseErr;
+    const horses = (horseRows ?? []) as Horse[];
+
+    const picks = computeAiPicksFromHorses(horses);
+    const weatherLine =
+      weather.desc != null && weather.temp_F != null
+        ? ` Louisville weather: ${String(weather.desc)}, ${String(weather.temp_F)}°F.`
+        : "";
+
+    const summary = {
+      ...picks,
+      note: `${picks.rationale}${weatherLine}`,
+      weather,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const { error: updateErr } = await supabase.from("games").update({ ai_summary: summary }).eq("slug", slug);
+    if (updateErr) throw updateErr;
     return NextResponse.json({ ok: true, ai_summary: summary });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "update failed";
