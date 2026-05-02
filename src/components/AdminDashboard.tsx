@@ -54,7 +54,7 @@ export function AdminDashboard({ slug, initialGame, initialHorses }: { slug: str
       setMsg(j.error ?? "Settle failed");
       return;
     }
-    setMsg(`Settled ${j.settled} bets.`);
+    setMsg("Race results saved.");
     window.location.href = `/g/${slug}/results`;
   }
 

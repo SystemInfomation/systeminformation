@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { useSound } from "@/components/providers";
+
+const SLUG = "derby-2026";
 
 export function SiteHeader() {
   const { theme, setTheme } = useTheme();
-  const { muted, toggleMuted } = useSound();
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--derby-gold)]/25 bg-[var(--derby-forest)]/95 backdrop-blur-md">
@@ -16,25 +16,25 @@ export function SiteHeader() {
         </Link>
         <nav className="flex flex-wrap items-center gap-2 text-sm">
           <Link
-            href="/join/derby-2026"
+            href={`/g/${SLUG}/pick`}
             className="rounded-full border border-[var(--derby-gold)]/40 px-3 py-1 text-[var(--derby-cream)] hover:bg-[var(--derby-gold)]/10"
           >
-            Join
+            Picks
           </Link>
           <Link
-            href="/g/derby-2026/bet"
+            href={`/g/${SLUG}/leaderboard`}
             className="rounded-full border border-transparent px-3 py-1 text-[var(--derby-cream)] hover:bg-white/5"
           >
-            Bet
+            Everyone
           </Link>
           <Link
-            href="/g/derby-2026/leaderboard"
+            href={`/g/${SLUG}/results`}
             className="rounded-full border border-transparent px-3 py-1 text-[var(--derby-cream)] hover:bg-white/5"
           >
-            Board
+            Results
           </Link>
           <Link
-            href="/admin/derby-2026"
+            href={`/admin/${SLUG}`}
             className="rounded-full border border-transparent px-3 py-1 text-[var(--derby-muted)] hover:text-[var(--derby-cream)]"
           >
             Office
@@ -45,14 +45,6 @@ export function SiteHeader() {
             className="rounded-full border border-white/15 px-2 py-1 text-xs text-[var(--derby-cream)]"
           >
             {theme === "dark" ? "Light" : "Dark"}
-          </button>
-          <button
-            type="button"
-            onClick={toggleMuted}
-            className="rounded-full border border-white/15 px-2 py-1 text-xs text-[var(--derby-cream)]"
-            title="Toggle sound"
-          >
-            {muted ? "Sound off" : "Sound on"}
           </button>
         </nav>
       </div>

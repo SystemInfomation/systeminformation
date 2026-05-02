@@ -1,6 +1,7 @@
-import { LeaderboardChart } from "@/components/LeaderboardChart";
 import { createClient } from "@/lib/supabase/server";
-import type { Bet, Game, Profile } from "@/lib/database.types";
+import type { Game, Horse, Profile, Top3Pick } from "@/lib/database.types";
+import { top3ExactScore } from "@/lib/scoreTop3";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -12,79 +13,82 @@ export default async function LeaderboardPage({ params }: Props) {
   if (!game) notFound();
   const g = game as Game;
 
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("game_id", g.id)
-    .order("current_balance", { ascending: false });
+  const { data: picks } = await supabase.from("top3_picks").select("*").eq("game_id", g.id);
+  const { data: profiles } = await supabase.from("profiles").select("*").eq("game_id", g.id);
+  const { data: horses } = await supabase.from("horses").select("*").eq("game_id", g.id);
+  const { data: result } = await supabase.from("race_results").select("*").eq("game_id", g.id).maybeSingle();
 
-  const { data: bets } = await supabase.from("bets").select("*").eq("game_id", g.id);
+  const horseMap = new Map((horses as Horse[] | null)?.map((h) => [h.id, h]) ?? []);
+  const profileByUser = new Map((profiles as Profile[] | null)?.map((p) => [p.user_id, p]) ?? []);
+  const positions = (result?.positions as string[] | undefined) ?? [];
+  const settled = g.status === "settled" && positions.length >= 3;
 
-  const list = (profiles ?? []) as Profile[];
-  const betList = (bets ?? []) as Bet[];
-
-  const winsByUser = new Map<string, number>();
-  for (const b of betList) {
-    if (b.status === "won") winsByUser.set(b.user_id, (winsByUser.get(b.user_id) ?? 0) + 1);
-  }
-
-  const rows = list.map((p) => {
-    const roi =
-      p.starting_balance > 0
-        ? ((p.current_balance - p.starting_balance) / p.starting_balance) * 100
-        : 0;
+  const rows = ((picks ?? []) as Top3Pick[]).map((tp) => {
+    const p = profileByUser.get(tp.user_id);
+    const score = settled ? top3ExactScore(tp.pick_first, tp.pick_second, tp.pick_third, positions) : null;
     return {
-      name: `${p.avatar_emoji} ${p.display_name}`,
-      balance: Number(p.current_balance),
-      roi: Math.round(roi * 10) / 10,
-      wins: winsByUser.get(p.user_id) ?? 0,
+      tp,
+      name: p?.display_name ?? "Player",
+      emoji: p?.avatar_emoji ?? "🐎",
+      h1: horseMap.get(tp.pick_first)?.name ?? "—",
+      h2: horseMap.get(tp.pick_second)?.name ?? "—",
+      h3: horseMap.get(tp.pick_third)?.name ?? "—",
+      score,
     };
+  });
+
+  rows.sort((a, b) => {
+    if (a.score != null && b.score != null && b.score !== a.score) return b.score - a.score;
+    return a.name.localeCompare(b.name);
   });
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-serif text-3xl font-bold text-[var(--foreground)]">Leaderboard</h1>
-        <p className="text-sm text-[var(--derby-muted)]">Sorted by pretend bankroll. ROI is vs starting stack.</p>
+        <h1 className="font-serif text-3xl font-bold text-[var(--foreground)]">Everyone&apos;s top 3</h1>
+        <p className="text-sm text-[var(--derby-muted)]">
+          {settled
+            ? "Sorted by how many places you nailed (1st→1st, 2nd→2nd, 3rd→3rd)."
+            : "After the race is entered in Race office, scores show up here."}
+        </p>
       </div>
-
-      <LeaderboardChart data={rows} />
 
       <div className="overflow-x-auto rounded-3xl border border-white/10">
         <table className="w-full text-left text-sm text-[var(--foreground)]">
           <thead className="bg-white/5 text-xs uppercase text-[var(--derby-muted)]">
             <tr>
-              <th className="px-4 py-3">#</th>
-              <th className="px-4 py-3">Player</th>
-              <th className="px-4 py-3">Bankroll</th>
-              <th className="px-4 py-3">ROI %</th>
-              <th className="px-4 py-3">Winning bets</th>
+              <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">1st pick</th>
+              <th className="px-4 py-3">2nd pick</th>
+              <th className="px-4 py-3">3rd pick</th>
+              {settled && <th className="px-4 py-3">Score</th>}
             </tr>
           </thead>
           <tbody>
-            {list.map((p, i) => {
-              const roi =
-                p.starting_balance > 0
-                  ? ((p.current_balance - p.starting_balance) / p.starting_balance) * 100
-                  : 0;
-              return (
-                <tr key={p.id} className="border-t border-white/10">
-                  <td className="px-4 py-3">{i + 1}</td>
-                  <td className="px-4 py-3 font-medium">
-                    <span className="mr-2">{p.avatar_emoji}</span>
-                    {p.display_name}
-                    {i === 0 && <span className="ml-2 text-[var(--derby-gold)]">🏆</span>}
+            {rows.map((r) => (
+              <tr key={r.tp.id} className="border-t border-white/10">
+                <td className="px-4 py-3 font-medium">
+                  <span className="mr-1">{r.emoji}</span>
+                  {r.name}
+                </td>
+                <td className="px-4 py-3">{r.h1}</td>
+                <td className="px-4 py-3">{r.h2}</td>
+                <td className="px-4 py-3">{r.h3}</td>
+                {settled && (
+                  <td className="px-4 py-3 font-mono text-[var(--derby-gold)]">
+                    {r.score}/3 {r.score === 3 ? "🎯" : ""}
                   </td>
-                  <td className="px-4 py-3 font-mono">${Number(p.current_balance).toFixed(0)}</td>
-                  <td className="px-4 py-3">{roi.toFixed(1)}%</td>
-                  <td className="px-4 py-3">{winsByUser.get(p.user_id) ?? 0}</td>
-                </tr>
-              );
-            })}
-            {!list.length && (
+                )}
+              </tr>
+            ))}
+            {!rows.length && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-[var(--derby-muted)]">
-                  No players yet.
+                <td colSpan={settled ? 5 : 4} className="px-4 py-8 text-center text-[var(--derby-muted)]">
+                  No picks yet.{" "}
+                  <Link href={`/g/${slug}/pick`} className="text-[var(--derby-gold)]">
+                    Be the first
+                  </Link>
+                  .
                 </td>
               </tr>
             )}

@@ -22,8 +22,8 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Derby Family — Fake Money Game",
-  description: "Family Kentucky Derby pick game with pretend credits. Entertainment only.",
+  title: "Derby Family — Top 3 picks",
+  description: "Family Kentucky Derby game: your name and your top 3 horses. No money.",
 };
 
 export default function RootLayout({

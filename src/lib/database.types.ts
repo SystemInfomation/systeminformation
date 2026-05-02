@@ -71,3 +71,13 @@ export type Message = {
   body: string;
   created_at: string;
 };
+
+export type Top3Pick = {
+  id: string;
+  game_id: string;
+  user_id: string;
+  pick_first: string;
+  pick_second: string;
+  pick_third: string;
+  updated_at: string;
+};

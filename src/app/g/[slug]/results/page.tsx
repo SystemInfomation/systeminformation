@@ -1,6 +1,7 @@
 import { ConfettiCelebration } from "@/components/ConfettiCelebration";
 import { createClient } from "@/lib/supabase/server";
-import type { Game, Horse, Profile, RaceResult } from "@/lib/database.types";
+import type { Game, Horse, Profile, Top3Pick } from "@/lib/database.types";
+import { top3ExactScore } from "@/lib/scoreTop3";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -13,24 +14,26 @@ export default async function ResultsPage({ params }: Props) {
   if (!game) notFound();
   const g = game as Game;
 
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("game_id", g.id)
-    .order("current_balance", { ascending: false });
-
+  const { data: picks } = await supabase.from("top3_picks").select("*").eq("game_id", g.id);
+  const { data: profiles } = await supabase.from("profiles").select("*").eq("game_id", g.id);
   const { data: result } = await supabase.from("race_results").select("*").eq("game_id", g.id).maybeSingle();
-
   const { data: horses } = await supabase.from("horses").select("*").eq("game_id", g.id);
+
   const horseMap = new Map((horses as Horse[] | null)?.map((h) => [h.id, h]) ?? []);
+  const profileByUser = new Map((profiles as Profile[] | null)?.map((p) => [p.user_id, p]) ?? []);
 
-  const rr = result as RaceResult | null;
-  const positions = rr?.positions ?? [];
-  const top3 = positions.slice(0, 3).map((id) => horseMap.get(id)?.name ?? id);
+  const positions = (result?.positions as string[] | undefined) ?? [];
+  const top3names = positions.slice(0, 3).map((id) => horseMap.get(id)?.name ?? id);
 
-  const list = (profiles ?? []) as Profile[];
-  const podium = list.slice(0, 3);
-  const showConfetti = g.status === "settled" && list.length > 0;
+  const scored = ((picks ?? []) as Top3Pick[])
+    .map((tp) => {
+      const p = profileByUser.get(tp.user_id);
+      const score = top3ExactScore(tp.pick_first, tp.pick_second, tp.pick_third, positions);
+      return { tp, p, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const showConfetti = g.status === "settled" && scored.some((s) => s.score === 3);
 
   return (
     <div className="space-y-8">
@@ -38,41 +41,47 @@ export default async function ResultsPage({ params }: Props) {
       <div>
         <h1 className="font-serif text-3xl font-bold text-[var(--foreground)]">Results</h1>
         <p className="text-sm text-[var(--derby-muted)]">
-          {g.status === "settled" ? "Race scored — crowns distributed." : "Race not settled yet. Someone with the race office link can enter finishes."}
+          {g.status === "settled"
+            ? "Official finish vs. family picks."
+            : "Race not entered yet. Someone with the Race office link can set the finish order."}
         </p>
       </div>
 
-      {top3.length > 0 && (
+      {top3names.length > 0 && (
         <div className="rounded-3xl border border-[var(--derby-gold)]/35 bg-[var(--derby-forest)]/80 p-6 text-[var(--derby-cream)]">
-          <h2 className="font-serif text-lg text-[var(--derby-gold)]">Official top 3 (race office)</h2>
+          <h2 className="font-serif text-lg text-[var(--derby-gold)]">Official top 3</h2>
           <ol className="mt-3 list-decimal space-y-1 pl-5">
-            {top3.map((n) => (
+            {top3names.map((n) => (
               <li key={n}>{n}</li>
             ))}
           </ol>
         </div>
       )}
 
-      {g.status === "settled" && (
-        <div className="grid gap-4 md:grid-cols-3">
-          {podium.map((p, i) => (
-            <div
-              key={p.id}
-              className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center text-[var(--foreground)]"
-            >
-              <div className="text-4xl">{i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}</div>
-              <div className="mt-2 font-serif text-xl font-semibold">
-                {p.avatar_emoji} {p.display_name}
-              </div>
-              <div className="mt-1 font-mono text-[var(--derby-gold)]">${Number(p.current_balance).toFixed(0)}</div>
-              <div className="text-xs text-[var(--derby-muted)]">final bankroll</div>
-            </div>
-          ))}
+      {g.status === "settled" && scored.length > 0 && (
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <h2 className="font-serif text-xl text-[var(--foreground)]">How everyone did</h2>
+          <p className="mt-1 text-xs text-[var(--derby-muted)]">Score = exact 1st, 2nd, and 3rd matches (max 3).</p>
+          <ul className="mt-4 space-y-3">
+            {scored.map(({ tp, p, score }) => (
+              <li
+                key={tp.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-black/10 px-4 py-3 text-[var(--foreground)]"
+              >
+                <span className="font-medium">
+                  {p?.avatar_emoji} {p?.display_name ?? "Player"}
+                </span>
+                <span className="text-[var(--derby-gold)]">
+                  {score}/3 {score === 3 ? "Perfect!" : score === 2 ? "Nice!" : score === 1 ? "One hit!" : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
       <Link href={`/g/${slug}/leaderboard`} className="inline-block text-[var(--derby-gold)]">
-        ← Back to full leaderboard
+        ← See full pick grid
       </Link>
     </div>
   );

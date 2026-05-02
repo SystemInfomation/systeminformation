@@ -15,6 +15,7 @@ export async function POST(_req: Request, ctx: Ctx) {
   if (gErr || !game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
   await supabase.from("bets").delete().eq("game_id", game.id);
+  await supabase.from("top3_picks").delete().eq("game_id", game.id);
   await supabase.from("race_results").delete().eq("game_id", game.id);
   await supabase.from("messages").delete().eq("game_id", game.id);
 
